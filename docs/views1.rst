@@ -1,15 +1,18 @@
-.. Copyright 2009 Luciano G. S. Ramalho; alguns direitos reservados
-   Este trabalho é distribuído sob a licença Creative Commons 3.0 BY-SA  
-   (Atribuição-Compartilhamento pela mesma Licença 3.0). 
+.. Copyright 2012 Luciano G. S. Ramalho; alguns direitos reservados
+   Este trabalho é distribuído sob a licença Creative Commons 3.0 BY-NC-SA  
+   (Atribuição-Compartilhamento pela mesma Licença 3.0-Uso não comercial). 
    Resumindo, você pode:
      - copiar, distribuir e exibir o texto e ilustrações
      - criar obras derivadas
    Sob as seguintes condições:
      - Atribuição: Você deve dar crédito ao autor original, mantendo este
        aviso em todos os arquivos derivados
+     - Uso não comercial — Você não pode usar esta obra para fins comerciais  
      - Compartilhamento pela mesma Licença: se você alterar, transformar ou
        derivar outro trabalho a partir deste, você pode distribuir o trabalho
        resultante somente sob a mesma licença, ou uma similar e compatível
+   Para fazer uso comercial deste conteúdo, entre em contato com o autor,
+   Luciano Ramalho, para obter outra licença de uso.
 
 ===========================================
 Views, URLs e templates: o básico
@@ -30,9 +33,16 @@ Vamos começar o tema das views apresentando as views genéricas que vêm pronta
 
 3. mesmo quando as views genéricas incluídas no Django não resolverem o seu problema, você poderá se inspirar em suas convenções para criar as suas próprias views parametrizadas, tornando mais flexível a sua aplicação e seguindo o princípio :term:`DRY`
 
-A melhor referência para views genéricas ainda é o **Apêndice D** do **Django Book (primeira edição)**: http://djangobook.com/en/1.0/appendixD/
+O mecanismo de views genéricas mudou radicalmente no Django 1.3: antes essas views eram implementadas como funções, agora são classes, facilitando o reuso do código por composição e especialização.
 
-A referência oficial é a mais atualizada mas não tem os exemplos do Django Book, por isso é mais difícil de ler: http://docs.djangoproject.com/en/dev/ref/generic-views/
+O lugar para começar a estudar as views genéricas baseadas em classe é o *topic guide*: https://docs.djangoproject.com/en/dev/topics/class-based-views/
+
+A referência oficial fica em:
+https://docs.djangoproject.com/en/dev/ref/class-based-views/
+
+A referência do jeito antigo de fazer views genéricas é:
+https://docs.djangoproject.com/en/dev/ref/generic-views/
+
 
 ----------------------------------
 Localização dos templates
@@ -93,26 +103,22 @@ Configuração de *views* genéricas
     :linenos:
 
     from django.conf.urls.defaults import *
-    from django.views.generic import list_detail
+    from django.views.generic import list, detail
     
     from biblio.catalogo.models import Livro
-    
-    livros_info = {
-        'queryset' : Livro.objects.all(),
-    }
-    
+        
     urlpatterns = patterns('',
-        url(r'^$', list_detail.object_list, livros_info),
-        url(r'^livro/(?P<object_id>\d+)/$', list_detail.object_detail, livros_info),
+        url(r'^$', list.ListView.as_view(model=Livro)),
+        url(r'^livro/(?P<pk>\d+)/$', detail.DetailView.as_view(model=Livro)),
     )
     
-- **linha 2:** importação do módulo ``views.generic.list_detail``
+- **linha 2:** importação dos módulos ``views.generic.list`` e ``views.generic.detail``
 
-- **linhas 6 a 8:** dicionário com parâmetro para as *generic views*
+- **linha 4:** importação do model que vai fornecer dados para as *generic views*
 
-- **linhas 10 a 13:** configuração das *generic views*
+- **linha 7:** configuração da *generic view* para listar todos os livros
 
-- **linha 12:** o grupo nomeado ``(?P<object_id>\d+)`` é passado para a *view* como um parâmetro de mesmo nome
+- **linha 8:** o grupo nomeado ``(?P<pk>\d+)`` será acessado pela *view* como um parâmetro nomeado como ``pk``
 
 .. _primeiro-template:
 
@@ -141,6 +147,7 @@ Primeiro template: ``livro_list.html``
       {% endfor %}
     </table>
 
+
 ----------------------------------------
 Segundo template: ``livro_detail.html``
 ----------------------------------------
@@ -161,6 +168,31 @@ Segundo template: ``livro_detail.html``
             <dd>{{ object.isbn }}</dd>
     </dl>
     
+------------------------------------------------
+Modelo de classes das views genéricas simples
+------------------------------------------------
+
+.. image:: _static/generic-views-base.*
+   :align: center
+   :width: 600px
+
+------------------------------------------------
+Modelo de classes das views genéricas *list*
+------------------------------------------------
+
+.. image:: _static/generic-views-list.*
+   :align: center
+   :width: 800px
+
+------------------------------------------------
+Modelo de classes das views genéricas *detail*
+------------------------------------------------
+
+.. image:: _static/generic-views-list.*
+   :align: center
+   :width: 800px
+
+
     
 ---------------------------------------------
 O problema do caminho da aplicação nas URLs
@@ -215,49 +247,51 @@ A solução do problema envolve duas alterações, ambas dentro da aplicação `
 *Views* genéricas incluídas com o Django (1)
 ------------------------------------------------
 
-- as *generic views* ficam todas no pacote ``django.views.generic``, ou seja, o nome completo da primeira mencionada abaixo é ``django.views.generic.list_detail.object_list``
+- as *generic views* ficam todas no pacote ``django.views.generic``
 
 - *generic views* para listagem/detalhe (acabamos de ver)
 
-    - ``list_detail.object_list``
+    - ``django.views.generic.list.ListView``
 
-    - ``list_detail.object_detail``
+    - ``django.views.generic.detail.DetailView``
     
 - *generic views* “simples”
 
-    - ``simple.direct_to_template``
+    - ``django.views.generic.base.TemplateView``
     
-    - ``simple.redirect_to``
+    - ``django.views.generic.base.RedirectView``
     
 - *generic views* para criar/alterar/deletar objetos
 
-    - ``create_update.create_object``
+    - ``django.views.generic.edit.FormView``
     
-    - ``create_update.update_object``
+    - ``django.views.generic.edit.CreateView``
     
-    - ``create_update.delete_object``
+    - ``django.views.generic.edit.UpdateView``
+
+    - ``django.views.generic.edit.DeleteView``
+
 
 ------------------------------------------------
 *Views* genéricas incluídas com o Django (2)
 ------------------------------------------------
 
-- estas *generic views* também ficam no pacote ``django.views.generic``
-
 - *generic views* para navegar por arquivos cronológicos
     
-    - ``date_based.archive_index``
+    - ``django.views.generic.date.ArchiveIndexView``
+    
+    - ``django.views.generic.date.YearArchiveView``
+    
+    - ``django.views.generic.date.MonthArchiveView``
+    
+    - ``django.views.generic.date.WeekArchiveView``
+    
+    - ``django.views.generic.date.DayArchiveView``
+    
+    - ``django.views.generic.date.TodayArchiveView``
+    
+    - ``django.views.generic.date.DateDetailView``
 
-    - ``date_based.archive_year``
-
-    - ``date_based.archive_month``
-
-    - ``date_based.archive_week``
-
-    - ``date_based.archive_day``
-
-    - ``date_based.archive_today``
-
-    - ``date_based.object_detail``
 
 ----------------------------------------------
 Principais funções para configuração de URLs
